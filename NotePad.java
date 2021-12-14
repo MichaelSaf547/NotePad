@@ -31,7 +31,7 @@ import javafx.stage.Stage;
 
 /**
  *
- * @author AL Lewaa Company
+ * @author Michael Safwat
  */
 public class NotePad extends Application {
     
@@ -442,7 +442,7 @@ public class NotePad extends Application {
         Compile_Run.setOnAction(new EventHandler<ActionEvent>(){
             @Override
             public void handle(ActionEvent event) {
-                Area.getText();
+                //Still Working on
             }
         
         });
