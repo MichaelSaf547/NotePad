@@ -3,14 +3,23 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/javafx/FXMain.java to edit this template
  */
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -28,10 +37,11 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 /**
  *
- * @author Michael Safwat
+ * @author AL Lewaa Company
  */
 public class NotePad extends Application {
     
@@ -55,7 +65,8 @@ public class NotePad extends Application {
     MenuItem Delete;
     MenuItem Select_All;
     MenuItem About;
-    MenuItem Compile_Run;
+    MenuItem Compile;
+    MenuItem Run;
     
     
     TextArea Area;
@@ -68,6 +79,7 @@ public class NotePad extends Application {
     int width = 500;
     int Save_Flag = 1;
     int start, end;
+    int com_run = 0;
     
     String StringS = "";
     String location = "";
@@ -80,6 +92,7 @@ public class NotePad extends Application {
         File_ChooserO = new FileChooser();
         File_ChooserO.setTitle("Open File");
         File_ChooserS.getExtensionFilters().addAll(new ExtensionFilter("All Files", "*.*"));
+        File_ChooserO.getExtensionFilters().addAll(new ExtensionFilter("All Files", "*.*"));
         
         //Create a Border Pane 
         b = new BorderPane();
@@ -129,12 +142,13 @@ public class NotePad extends Application {
         //Help Items
         
         About = new MenuItem("About");
-        Compile_Run = new MenuItem("Compile and Run");
+        Compile = new MenuItem("Compile");
+        Run = new MenuItem("Run");
         
         //add Items to each menu:
         File.getItems().addAll(New, Open, Save, Exit);
         Edit.getItems().addAll(Undo, Cut, Copy, Paste, Delete, Select_All);
-        Help.getItems().addAll(About, Compile_Run);
+        Help.getItems().addAll(About, Compile, Run);
         
         //Create a Separators
         SepFE = new SeparatorMenuItem();
@@ -172,6 +186,59 @@ public class NotePad extends Application {
     }
     
     
+    public void Read(Stage primaryStage){
+        location = File_ChooserO.showOpenDialog(primaryStage).toString();
+        try {
+            File file = new File(location);
+            String name = file.getName();
+            Scanner s = new Scanner(file).useDelimiter("\\s+");
+            while (s.hasNextLine()) 
+                {
+                    Area.appendText(s.nextLine() + "\n");
+                }
+            primaryStage.setTitle(name);
+        }
+        
+        
+        catch (FileNotFoundException ex) {
+            System.err.println(ex);
+        }
+    }
+    
+    public void Write(Stage primaryStage)
+    {
+        FileChooser.ExtensionFilter extFilter = 
+        new FileChooser.ExtensionFilter("TXT files (*.txt)", "*.txt");
+        File_ChooserS.getExtensionFilters().add(extFilter);
+
+        //Show save file dialog
+        File file = File_ChooserS.showSaveDialog(primaryStage);
+        String name = file.getName();
+        primaryStage.setTitle(name);
+        if(file != null)
+        {
+            FileWriter fileWriter = null;
+            try {
+                fileWriter = new FileWriter(file);
+            } 
+            catch (IOException ex) {
+                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            try {
+                fileWriter.write(Area.getText());
+            } 
+            catch (IOException ex) {
+                    Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            try {
+                fileWriter.close();
+                } 
+            catch (IOException ex) {
+                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
     
     @Override
     public void start(Stage primaryStage) {
@@ -199,7 +266,14 @@ public class NotePad extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
         
+        Area.textProperty().addListener(new ChangeListener<String>(){
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                Save_Flag = 0;
+                com_run = 0;
+            }
         
+        });
         
         New.setOnAction(new EventHandler<ActionEvent>(){
             
@@ -213,32 +287,7 @@ public class NotePad extends Application {
                     
                     if(result.equals("Yes"))
                     {
-                        FileChooser.ExtensionFilter extFilter = 
-                        new FileChooser.ExtensionFilter("TXT files (*.txt)", "*.txt");
-                        File_ChooserS.getExtensionFilters().add(extFilter);
-
-                        //Show save file dialog
-                        File file = File_ChooserS.showSaveDialog(primaryStage);
-
-                        if(file != null)
-                        {
-                            FileWriter fileWriter = null;
-                            try {
-                                fileWriter = new FileWriter(file);
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            try {
-                                fileWriter.write(Area.getText());
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            try {
-                                fileWriter.close();
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                        }
+                        Write(primaryStage);
                         Area.clear();
                     }
                     else
@@ -260,18 +309,26 @@ public class NotePad extends Application {
             @Override
             public void handle(ActionEvent event) {
                 
-                location = File_ChooserS.showOpenDialog(primaryStage).toString();
-                try {
-                        Scanner s = new Scanner(new File(location)).useDelimiter("\\s+");
-                        while (s.hasNextLine()) 
-                        {
-                         // check if next token is an int
-                          Area.appendText(s.nextLine() + "\n"); // display the found integer
-                        }
-                    } 
-                catch (FileNotFoundException ex) {
-                    System.err.println(ex);
+                if(Save_Flag == 0)
+                {
+                    DC.setResultConverter(ButtonType::getText);
+                    String result = DC.showAndWait().orElse(null);
+                    
+                    if(result.equals("Yes"))
+                    {
+                        Write(primaryStage);
+                        Area.clear();
+                    }
+                    else
+                    {
+                        Area.clear();
+                    }
                 }
+                else
+                {
+                    Area.clear();
+                }
+                Read(primaryStage);
             }
     
         });
@@ -280,32 +337,7 @@ public class NotePad extends Application {
             @Override
             public void handle(ActionEvent event) {
                 
-                FileChooser.ExtensionFilter extFilter = 
-                new FileChooser.ExtensionFilter("TXT files (*.txt)", "*.txt");
-                File_ChooserS.getExtensionFilters().add(extFilter);
-            
-                //Show save file dialog
-                File file = File_ChooserS.showSaveDialog(primaryStage);
-                
-                if(file != null)
-                {
-                    FileWriter fileWriter = null;
-                    try {
-                        fileWriter = new FileWriter(file);
-                    } catch (IOException ex) {
-                        Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                    try {
-                        fileWriter.write(Area.getText());
-                    } catch (IOException ex) {
-                        Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                    try {
-                        fileWriter.close();
-                    } catch (IOException ex) {
-                        Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                }
+                Write(primaryStage);
                 Save_Flag = 1; 
             }
         
@@ -322,32 +354,37 @@ public class NotePad extends Application {
                     
                     if(result.equals("Yes"))
                     {
-                        FileChooser.ExtensionFilter extFilter = 
-                        new FileChooser.ExtensionFilter("TXT files (*.txt)", "*.txt");
-                        File_ChooserS.getExtensionFilters().add(extFilter);
-
-                        //Show save file dialog
-                        File file = File_ChooserS.showSaveDialog(primaryStage);
-
-                        if(file != null)
-                        {
-                            FileWriter fileWriter = null;
-                            try {
-                                fileWriter = new FileWriter(file);
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            try {
-                                fileWriter.write(Area.getText());
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                            try {
-                                fileWriter.close();
-                            } catch (IOException ex) {
-                                Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                        }
+                        Write(primaryStage);
+                        primaryStage.close();
+                    }
+                    else
+                    {
+                        primaryStage.close();
+                    }
+                }
+                else
+                {
+                    primaryStage.close();
+                }
+                Platform.exit();
+                System.exit(0);
+                
+            }
+        
+        });
+        
+        primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() { //close scene
+            @Override
+            public void handle(WindowEvent t) {
+                if(Save_Flag == 0)
+                {
+                    
+                    DC.setResultConverter(ButtonType::getText);
+                    String result = DC.showAndWait().orElse(null);
+                    
+                    if(result.equals("Yes"))
+                    {
+                        Write(primaryStage);
                         primaryStage.close();
                     }
                     else
@@ -360,8 +397,9 @@ public class NotePad extends Application {
                     primaryStage.close();
                 }
                 
+                Platform.exit();
+                System.exit(0);
             }
-        
         });
         
         
@@ -439,18 +477,132 @@ public class NotePad extends Application {
             }
         });
         
-        Compile_Run.setOnAction(new EventHandler<ActionEvent>(){
+        Compile.setOnAction(new EventHandler<ActionEvent>(){
             @Override
             public void handle(ActionEvent event) {
-                //Still Working on
+                
+                String dir = System.getProperty("user.dir");
+                File file = new File(dir + "\\Mymain1.java");
+
+                try {
+                    // Create new file
+                    // if it does not exist
+                    if (file.createNewFile())
+                    {}
+                } catch (IOException ex) {
+                    Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                String name = file.getName();
+                primaryStage.setTitle(name);
+                if(file != null)
+                {
+                    FileWriter fileWriter = null;
+                    try {
+                        fileWriter = new FileWriter(file);
+                    } 
+                    catch (IOException ex) {
+                        Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    try {
+                        fileWriter.write(Area.getText());
+                    } 
+                    catch (IOException ex) {
+                            Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    try {
+                        fileWriter.close();
+                        } 
+                    catch (IOException ex) {
+                        Logger.getLogger(NotePad.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                
+                CallHelloPgm textexec = new CallHelloPgm();
+                textexec.runt();
+                
             }
         
         });
         
+        Run.setOnAction(new EventHandler<ActionEvent>(){
+            @Override
+            public void handle(ActionEvent event) {
+                
+                if(com_run == 0)
+                {
+                    Dialog<String> DCo = new Dialog<String>();
+                    DCo.setTitle("Run Error");
+                    DCo.setContentText("You have to compile first!!");
+                    ButtonType OKAY = new ButtonType("Okay");
+
+                    DCo.getDialogPane().getButtonTypes().addAll(OKAY);
+                    DCo.showAndWait();
+                }
+                else
+                {
+                    CallHelloPgm textexec = new CallHelloPgm();
+                    textexec.runt();
+                }
+                
+            }
+        });
         
         
     }
 
-    
-    
+    public class CallHelloPgm
+    {
+       
+       public void runt()
+       {
+          Process theProcess = null;
+          BufferedReader inStream = null;
+          BufferedReader errStream = null;
+          
+          String [] arr = new String[2];
+          arr[1] = "java mymain1.Mymain1";
+          arr[0] = "javac -d . Mymain1.java";
+           
+          // call the Hello class
+          try
+          {
+              if(com_run == 0)
+              {
+                    theProcess = Runtime.getRuntime().exec(arr[0]);
+                  
+                    errStream = new BufferedReader(
+                                    new InputStreamReader(theProcess.getErrorStream()));  
+                    if(errStream.read() == -1)
+                    {
+                        System.out.println("Compiled succefully.");
+                        com_run = 1;
+                    }
+                    else
+                    {
+                        System.out.println(errStream.readLine());
+                    }
+                    
+                    
+                  
+              }
+              else
+              {
+                    theProcess = Runtime.getRuntime().exec(arr[1]);
+                  
+                    inStream = new BufferedReader(
+                                    new InputStreamReader(theProcess.getInputStream()));  
+                    System.out.println(inStream.readLine());
+              }
+              
+          }
+          catch(IOException e)
+          {
+             System.err.println("Error on exec() method");
+             e.printStackTrace();  
+          }
+
+       } 
+    } 
+
 }
